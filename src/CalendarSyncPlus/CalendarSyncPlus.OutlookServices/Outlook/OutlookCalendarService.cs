@@ -259,7 +259,7 @@ namespace CalendarSyncPlus.OutlookServices.Outlook
                             recipient.Email = GetSMTPAddressForRecipients(attendee);
                         }
                         recipient.MeetingResponseStatus = attendee.GetMeetingResponseStatus();
-                        
+
                         if (appointmentItem.RequiredAttendees != null &&
                             appointmentItem.RequiredAttendees.Contains(recipient.Name))
                         {
@@ -293,8 +293,17 @@ namespace CalendarSyncPlus.OutlookServices.Outlook
                     {
                         foreach (UserProperty userProperty in userProperties)
                         {
-                            app.ExtendedProperties.Add(userProperty.Name,
-                                userProperty.Value);
+                            try
+                            {
+                                app.ExtendedProperties.Add(userProperty.Name,
+                                    Convert.ToString(userProperty.Value));
+                            }
+                            catch (Exception exception)
+                            {
+                                // Dirty catch to ensure we continue even when some attributes are not valid (still don't understand why)
+                                String message = "Error while decoding property [" + userProperty.Name + "] for event [" + appointmentItem.Subject + "] starting [" + appointmentItem.Start + "]: " + exception.Message;
+                                ApplicationLogger.LogError(message);
+                            }
                         }
 
                         Marshal.FinalReleaseComObject(userProperties);
@@ -304,7 +313,7 @@ namespace CalendarSyncPlus.OutlookServices.Outlook
                 }
             }
         }
-        
+
         private List<Appointment> GetAppointments(DateTime startDate, DateTime endDate)
         {
             AppointmentListWrapper list = GetOutlookEntriesForSelectedTimeRange(startDate, endDate);
@@ -591,12 +600,12 @@ namespace CalendarSyncPlus.OutlookServices.Outlook
         {
             CheckCalendarSpecificData(calendarSpecificData);
             var calendarAppointments = new CalendarAppointments();
-            
+
             List<Appointment> appointmentList =
                     await
                         Task<List<Appointment>>.Factory.StartNew(
-                            () => GetAppointments(startDate,endDate));
-            
+                            () => GetAppointments(startDate, endDate));
+
             if (appointmentList != null)
             {
                 calendarAppointments.AddRange(appointmentList);
